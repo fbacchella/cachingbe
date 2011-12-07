@@ -58,6 +58,7 @@ public class TestFilePage {
     @Test(expected=IOException.class)
     public void testFailed() throws IOException {
         File testFile = testFolder.newFile("testfilepage");
+        testFile.delete();
         FilePage.prepare_fd(testFile.getCanonicalPath(), new FileDescriptor(), true);
     }
 

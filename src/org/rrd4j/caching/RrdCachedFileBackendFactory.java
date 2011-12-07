@@ -11,7 +11,7 @@ import org.rrd4j.core.RrdFileBackendFactory;
 
 /**
  * The factory for a RrdCachedFileBackend. It preloads the directIO JNI wrapper library by expecting it to be in the 
- * same directory as the class' jar. An helper method loadDirect() can also be used.
+ * same directory as the class' jar. An helper method loadDirect() can also be used for different setup.
  * 
  * @author Fabrice Bacchella
  *
@@ -25,7 +25,7 @@ public class RrdCachedFileBackendFactory extends RrdFileBackendFactory {
     private Timer syncTimer = null;
 
     static {
-        URL classURL = RrdCachedFileBackendFactory.class.getClassLoader().getResource("jrds/caching/RrdCachedFileBackendFactory.class");
+        URL classURL = RrdCachedFileBackendFactory.class.getClassLoader().getResource("org/rrd4j/caching/RrdCachedFileBackendFactory.class");
         String classfile = classURL.getPath().replaceAll("!.*", "").replaceAll("file:", "");
         File homeFile = new File(classfile).getParentFile();
         try {
@@ -37,7 +37,7 @@ public class RrdCachedFileBackendFactory extends RrdFileBackendFactory {
 
     /**
      * An help class that can be used to load the directIO JNI wrapper library.
-     * @param path
+     * @param path the native library directory 
      * @throws IOException
      */
     static final public void loadDirect(File path) throws IOException {

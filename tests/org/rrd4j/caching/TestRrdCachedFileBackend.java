@@ -27,6 +27,7 @@ public class TestRrdCachedFileBackend {
     @BeforeClass
     static public void configure() throws IOException, ParserConfigurationException {
         File libfile = new File(String.format("build/native.%s.%s", System.getProperty("os.name").replaceAll(" ", ""), System.getProperty("os.arch")));
+        System.out.println(libfile.getCanonicalPath());
         RrdCachedFileBackendFactory.loadDirect(libfile);
     }
 
