@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ivy-module version="2.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+            xsi:noNamespaceSchemaLocation="http://ant.apache.org/ivy/schemas/ivy.xsd">
+    <info organisation="jrds" module="main" />
+    <configurations>
+        <conf name="lib" />
+        <conf name="libtest" />
+    </configurations>
+    <dependencies>
+        <dependency org="org.rrd4j" name="rrd4j" rev="2.1" conf="lib->default" />
+        <dependency org="junit" name="junit" rev="4.9" conf="libtest->default" />
+    </dependencies>
+</ivy-module>

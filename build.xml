@@ -1,0 +1,197 @@
+<!-- http://sourceforge.net/apps/mediawiki/import-ant/index.php -->
+<project name="cachingbe" default="build" basedir="." xmlns:ivy="antlib:org.apache.ivy.ant" xmlns:cpptasks="antlib:net.sf.antcontrib.cpptasks">
+
+    <description>
+        An heavy caching backeng for rrd4j. It can use directio on some OS.
+    </description>
+
+    <!-- load environment variables as properties -->
+    <property environment="env"/>
+
+    <!-- load properties files -->
+    <property file="build.properties"/>
+    <property file="../build.properties"/>
+    <property file="${user.home}/build.properties"/>
+
+    <!-- default folder location properties -->
+    <property name="src.rel-dir" value="src"/>
+    <property name="tests.src.rel-dir" value="tests"/>
+    <property name="lib.rel-dir" value="lib"/>
+    <property name="build.rel-dir" value="build"/>
+    <property name="build.classes.rel-dir" value="${build.rel-dir}/class"/>
+    <property name="dist.rel-dir" value="dist"/>
+    <property name="doc.rel-dir" value="${dist.rel-dir}/javadoc" />
+    <property name="lib.tests.rel-dir" value="libtest"/>
+    <property name="build.tests.rel-dir" value="${build.rel-dir}/classtest"/>
+
+    <!-- compile -->
+    <property name="compile.debug" value="true" />
+    <property name="compile.debuglevel" value="lines,vars,source" />
+
+    <!-- jni build path -->
+    <path id="jni.include.path">
+        <pathelement path="${java.home}/include" />
+        <pathelement path="${java.home}/include/linux" />
+        <pathelement path="${java.home}/include/solaris" />
+        <pathelement path="${java.home}/../include" />
+        <pathelement path="${java.home}/../include/linux" />
+        <pathelement path="${java.home}/../include/solaris" />
+    </path>
+    
+    <!-- project classpath -->
+    <path id="project.classpath">
+        <!-- compiled classes -->
+        <pathelement location="${build.classes.rel-dir}" />
+        <!-- libraries -->
+        <fileset dir="${lib.rel-dir}">
+            <include name="*.jar" />
+        </fileset>
+    </path>
+
+    <!-- project classpath -->
+    <path id="tests.classpath">
+        <!-- compiled classes -->
+        <pathelement location="${build.tests.rel-dir}" />
+        <!-- libraries -->
+        <fileset dir="${lib.tests.rel-dir}">
+            <include name="*.jar" />
+        </fileset>
+    </path>
+
+    <target name="resolve" description="--> retrieve dependencies with ivy">
+        <ivy:retrieve type="jar" pattern="[conf]/[artifact].[ext]" />
+    </target>		
+
+	<target name="init">
+        <mkdir dir="${build.classes.rel-dir}"/>
+        <mkdir dir="${build.tests.rel-dir}"/>
+        <mkdir dir="${build.rel-dir}"/>
+    </target>
+
+    <target name="clean"
+        description="Delete temporary folders">
+        <delete dir="${build.rel-dir}" failonerror="false" deleteonexit="true" />
+        <delete dir="${dist.rel-dir}" failonerror="false" deleteonexit="true" />
+    </target>
+
+    <target name="compile" depends="init">
+        <!-- description="Compile source code" -->
+        <javac
+            srcdir="${src.rel-dir}"
+            destdir="${build.classes.rel-dir}"
+            debug="${compile.debug}"
+            debuglevel="${compile.debuglevel}"
+            >
+            <compilerarg line="" /> <!-- "-Xlint:all", "-Xlint:all,-path", "-Xlint:all,-path,-unchecked" -->
+            <classpath refid="project.classpath" />
+        </javac>
+    </target>
+
+    <!-- uses osArch and osName instead of os.name and os.arch, so they can be overriden -->
+    <!-- and beside of that, os.name for Mac Os contains a space -->
+    <property name="osArch" value="${os.arch}"/>
+    <condition property="osName" value="MacOSX" else="${os.name}" >
+        <os name="Mac OS X"/>
+    </condition>
+    <property name="build.native" value="${build.rel-dir}/native.${osName}.${osArch}"/>
+
+    <target name="jni" depends="compile">
+        <condition property="os.isMacOSX">
+            <os name="Mac OS X"/>
+        </condition>
+        <mkdir dir="${build.native}"/>
+        <javah outputFile="${build.native}/direct.h">
+            <class name="org.rrd4j.caching.FilePage" />
+            <class name="org.rrd4j.caching.PageCache" />
+            <classpath refid="project.classpath"/>
+        </javah>
+        <cpptasks:cc name="gcc" outtype="shared" outfile="${build.native}/direct"  optimize="speed" objdir="${build.native}" >
+            <includepath>
+                <path path="${build.native}" />
+                <path refid="jni.include.path" />
+            </includepath>
+            <fileset dir="src" includes="**/*.c" />
+        </cpptasks:cc>
+        <antcall target="rename.dylib" />
+    </target>
+
+    <target name="rename.dylib" if="os.isMacOSX">
+        <!-- FIXME: this is a hack; the cpptask should have an option to change the
+        suffix or at least understand the override from dylib to jnilib -->
+        <move file="${build.native}/libdirect.dylib" tofile="${build.native}/libdirect.jnilib" />
+    </target>
+
+    <!-- javadoc -->
+    <target name="javadoc" depends="init"
+        description="Generate Java classes documentation" >
+        <echo message="Generating javadocs to directory ${doc.rel-dir}" />
+        <delete dir="${doc.rel-dir}" />
+        <javadoc encoding="UTF-8" destdir="${doc.rel-dir}" sourcepath="">
+            <fileset dir="${src.rel-dir}" includes="**/*.java"/>
+            <classpath refid="project.classpath" />
+			<link href="http://download.oracle.com/javase/1.5.0/docs/api/"/>
+			<link href="http://rrd4j.googlecode.com/svn/trunk/javadoc/reference/"/>
+			<link href="http://www.junit.org/junit/javadoc/4.3"/>
+        </javadoc>
+    </target>
+
+    <!-- tests -->
+
+    <target name="compile-tests">
+        <!-- description="Compile tests" -->
+        <javac
+            srcdir="${tests.src.rel-dir}" 
+            destdir="${build.tests.rel-dir}"
+            debug="${compile.debug}"
+            debuglevel="${compile.debuglevel}"
+            >
+            <classpath refid="project.classpath" />
+            <classpath refid="tests.classpath" />
+        </javac>
+    </target>
+
+    <target name="run-tests" depends="compile-tests,jni"
+        description="Run tests">
+        <junit printsummary="yes" haltonfailure="no" fork="true">
+            <classpath refid="project.classpath" />
+            <classpath refid="tests.classpath" />
+            <formatter type="plain" usefile="false" />
+            <batchtest>
+                <fileset dir="${tests.src.rel-dir}"
+                    includes="**/Test*.java">
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
+
+    <!-- library -->
+
+    <property name="jar.rel-file" value="${dist.rel-dir}/${ant.project.name}.jar" />
+
+    <target name="create-jar" depends="compile,run-tests,jni">
+        <!-- description="Create a jar file" -->
+        <jar destfile="${jar.rel-file}">
+            <zipfileset dir="${build.rel-dir}"
+                includes=""
+                excludes="" />
+            </jar>
+        </target>
+
+        <!-- build -->
+
+        <target name="build" depends="create-jar,javadoc"
+            description="Build the project">
+            <copy todir="${dist.rel-dir}/${osName}.${osArch}" >
+            	<fileset dir="${build.native}">
+               		<include name="*.so"/>
+                	<include name="*.dll"/>
+                	<include name="*.jnilib"/>
+            	</fileset>
+            </copy>
+		</target>
+
+        <target name="rebuild" depends="clean,build">
+            <!-- description="Rebuild the project" -->
+        </target>
+
+    </project>
