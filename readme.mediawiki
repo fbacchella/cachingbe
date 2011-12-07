@@ -1,0 +1,30 @@
+== The caching backend ==
+
+JRDS provides a new RRD4J backend, the RrdCachedFileBackend. It provides an heavy caching backend, whose purpose is similar to rrdcached, by reducing dramaticaly the amout of IO, at the cost of slightly increased risk of loosing intermediate data.  Anyway the caching backend assert that the state on disk is coherent, with all waiting data committed to disk or none of them.
+
+To avoid double buffering of data within JRDS and the filesystem cache, it uses directio when available (at lease Linux and Solaris). Implementing directio in the java world was done through some jni call that file a FileDescriptor object with a handle to a directio opened file. The details of the implementation can be found [[tree/master/src/org/rrd4j/caching|here]] and [[blob/master/src/org/rrd4j/caching/FilePage.java|here]] for peoples interested in doing directio in Java.
+
+It need at least RRD4J version 2.1 to work.
+
+A kit with the needed jar and a few natives library can be downloaded {{:cachingbe.tar.gz|here}}.
+
+Its usage is rather simple, it can be registered within RRD44 with the following code 
+<nowiki>
+RrdBackendFactory.registerFactory(new RrdCachedFileBackendFactory());
+</nowiki>
+
+The RrdCachedFileBackendFactory class instanciation will look in the same directory that the class' jar to find the native library. If this fails, the RrdCachedFileBackendFactory.loadDirect(File) help is provided to specify the directory where the native library is stored.
+
+To use it, two parameters needs to be given :
+* pageCache : the number of 4 ko pages to be used by the cache.
+* syncPeriod : the commit interval in seconds.
+
+Example code use :
+
+<pre>
+RrdCachedFileBackendFactory factory = (RrdCachedFileBackendFactory) RrdBackendFactory.getFactory("CACHEDFILE");
+factory.setPageCache(10);
+factory.setSyncPeriod(30);
+...
+factory.sync();
+</pre>
