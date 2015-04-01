@@ -7,7 +7,7 @@
         <conf name="libtest" />
     </configurations>
     <dependencies>
-        <dependency org="org.rrd4j" name="rrd4j" rev="2.1" conf="lib->default" />
-        <dependency org="junit" name="junit" rev="4.9" conf="libtest->default" />
+        <dependency org="org.rrd4j" name="rrd4j" rev="2.2" conf="lib->default" />
+        <dependency org="junit" name="junit" rev="4.11" conf="libtest->default" />
     </dependencies>
 </ivy-module>
