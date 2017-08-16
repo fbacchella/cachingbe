@@ -3,7 +3,13 @@
 #define _GNU_SOURCE
 #endif
 
+#if defined(WITH_MAVEN) 
+#include <org_rrd4j_caching_FilePage.h>
+#include <org_rrd4j_caching_PageCache.h>
+#include <org_rrd4j_caching_PageCache_FileInfo.h>
+#else
 #include <direct.h>
+#endif
 
 #include <fcntl.h>
 #include <stdio.h>
@@ -80,7 +86,7 @@ int check_error(JNIEnv *env, int val, char* context) {
 
     if (val < 0) {
         class_ioex = (*env)->FindClass(env, "java/io/IOException");
-        if (class_ioex == NULL) return;
+        if (class_ioex == NULL) return -1;
 
         // context returned an error. Throw an IOException with the error string
         strerror_r(errno, error_buf, 1024);
